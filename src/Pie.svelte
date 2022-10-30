@@ -1,49 +1,93 @@
 <script lang="ts">
   import PieComponent from "./PieComponent.svelte";
+  import { spin } from "./store";
+
   export let options : Option[]   
   export let size : number
-  export let spin : boolean
   export let onWinner : (option:Option) => void
-  let randomRotation = 0
 
+  // Min and max wheel spin rotation in degrees
+  const min = 2000
+  const max = 7000
+  
+  let randomRotation = 0 // Random rotation for wheel spin
+
+  // Select winner and return to parent via callback [TODO: use global store]
   function afterWheelSpin() {
-    if(spin) {
+      if($spin) {
         const winnerSliceRotation = (randomRotation + 90) % 360 
         let winner
         options.some((option) => {            
             if(option.rotation >= winnerSliceRotation) return true
             winner = option
         })
-        console.log({winner});
+        spin.set(false)
         onWinner(winner)
     }
   }
 
-  $: if(spin) {
-    randomRotation = Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000;
+  function doSpin() {
+    spin.set(true)
   }
 
+  // When spin -> calculate random rotation of the wheel
+  $: if($spin) randomRotation = Math.floor(Math.random() * (max - min + 1)) + min;
+  
+  // Update radius if size of pie changes
   $: radius = size / 2;
   
 </script>
 
-<svg 
-    on:transitionend={afterWheelSpin} 
-    class={spin ? "spin" : ""} 
-    style={spin ? `transform: rotate(${randomRotation}deg)` : ""} 
-    width={size}
-    height={size} 
-    viewBox={`0 0 ${size} ${size}`} 
->
-    <!-- Render parts -->
-    {#each options as option}
-        <PieComponent {option} {radius} />
-    {/each}
-</svg>
+<div class="center">
+    <div class="chevron">˯</div> 
+    
+    <svg 
+        on:transitionend={afterWheelSpin} 
+        style={spin ? `transform: rotate(${randomRotation}deg); transition-duration: ${randomRotation+500}ms;` : ""} 
+        width={size}
+        height={size} 
+        viewBox={`0 0 ${size} ${size}`} 
+    >
+
+    
+        <!-- Render options as Pie Slices -->
+        {#each options as option}
+            <PieComponent {option} {radius} />
+        {/each}
+    
+
+        <!-- Spin overlay and text - click to spin the wheel -->
+        {#if options.length && !$spin}
+            <text alignment-baseline='central' text-anchor="middle" x={radius} y={radius} fill='var(--black)' dy=".1em">Click to Spin!</text>
+            <circle
+            r={radius}
+            cx={radius}
+            cy={radius}
+            fill="#DDD" 
+            fill-opacity="0.3"
+            z='999'
+            on:click={doSpin}
+            on:keydown={doSpin}
+            />
+        {/if}
+
+    </svg>
+</div>
 
 <style>
     svg {
-        transition-duration: 5s;
         transition-timing-function: cubic-bezier(.26,.32,0,1);
+    }
+    .center {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .chevron {
+        font-size: xx-large;
+    }
+    text {
+        font-weight: 600;
     }
 </style>

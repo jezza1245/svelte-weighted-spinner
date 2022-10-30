@@ -1,15 +1,29 @@
 <script lang="ts">
-  	import Pie from './Pie.svelte';
+	import Pie from './Pie.svelte';
+	import { spin } from './store'
+	
+	const size = 500 // Size of Pie
+	const halfCircumference = Math.PI * size/2;
+	const getNewColour = colourGenerator() // Instantiate colour generator
 	
 	let options: Option[] = []
 	let name = ""
 	let weight = 1
-	let spin = false
+	let winner : Option
 
-	const size = 500
-	const halfCircumference = Math.PI * size/2;
+	// Generate a new colour from the set or provided colours. If none left, generate a new random colour
+	function* colourGenerator() : Generator<string>{
+		const colours = ['#0091be','#eb6404','#95d600','#fec600','#27292d']
+		let index = 0
+		while(true){
+			if(index < colours.length) yield colours[index++]
+			else yield `#${Math.floor(Math.random()*16777100).toString(16)}`
+		}
+		
+	}
 
-	function generateOption(option: Option, newTotalWeight: number) : Option {
+	// Add the percentage and pieSize of pie calculated for the option given option weight relative to totalWeight
+	function addPercentageAndPieSizeToOption(option: Option, newTotalWeight: number) : Option {
 		let percentage = (option.weight / newTotalWeight) * 100
 		if(percentage > 100) percentage = 100
 		let pieSize = halfCircumference * percentage / 100;
@@ -22,33 +36,77 @@
 		}
 	}
 
-	function applyUpdatedRotations(incompleteOptions: Option[]) {
-		options = [...incompleteOptions.map((option, index) => {
+	// Add rotations to options
+	function addRotationToOption(incompleteOptions: Option[]) {
+
+		// For each option
+		let withRotations = [...incompleteOptions.map((option, index) => {
+			// Get PREVIOUS options and sum their percentages
 			const previousOptions = incompleteOptions.slice(0,index)			
 			const sumPreviousRotations = previousOptions.reduce((sum, option) => sum + option.percentage / 100 * 360, 0)
+
+			// rotation is equal to the sum of the previous options percentages -> then as a percentage of 360
 			return {
 				...option,
-				rotation: sumPreviousRotations
+				rotation: sumPreviousRotations,
 			}
 		})]
+		
+		// Work out text rotations for slice labels
+		if(withRotations.length > 1){
+			// For each option
+			options = [...withRotations.map((option, index) => {		
+
+				// Get index of next option (looping round array)
+				const nextLoopingIndex = (index + 1)%withRotations.length
+				let nextRotation = withRotations[nextLoopingIndex].rotation 
+
+				// if 0 set to 360
+				nextRotation = nextRotation === 0 ? 360 : nextRotation
+	
+				// text rotation is equal to the average of the current and next slice rotation (puts in center of slice)
+				return {
+					...option,
+					textRotation: (option.rotation + nextRotation) / 2,
+				}
+			})]	
+		} else {
+			// only 1 element, no need to calculate
+			options = withRotations
+		}
 	}
 
+	// On new option added
 	function onNewOption() {
+		// Calculate the total weights of all options
 		const newTotalWeight = options.reduce((count, option) => count + option.weight, 0) + weight
-		let percentage = (weight / newTotalWeight) * 100
-		if(percentage > 100) percentage = 100
 
-		const newOption = generateOption({name, weight, percentage: null, rotation: null, pieSize: null}, newTotalWeight)
-		const updatedExistingOptions = options.map((option, index) => generateOption(option, newTotalWeight))
+		// Get next available colour for the slice
+		const colour = getNewColour.next().value 
 
-		applyUpdatedRotations([...updatedExistingOptions, newOption])
+		// Generate a new option and add percentage and pie size given the total weights of all options
+		const newOption = addPercentageAndPieSizeToOption({name, weight, colour, percentage: null, rotation: 0, pieSize: null, textRotation: null}, newTotalWeight)
+		
+		// Go through existing options and update those with the new total weight
+		const updatedExistingOptions = options.map((option) => addPercentageAndPieSizeToOption(option, newTotalWeight))
+
+		// Add new option to updated existing options and add/update rotations
+		addRotationToOption([...updatedExistingOptions, newOption])
+
+		// Reset form fields
 		name = ""
 		weight = 1
 	}	
 
+	// When a winner is calculated, set the winner in state [TODO: do from pie, use store]
 	function onWinner(option: Option) {
-		alert('Winner:'+option.name)
-		spin = false
+		winner = option
+	}
+
+	// Reset state values
+	function doReset() {
+		options = []
+		winner = undefined
 	}
 
 </script> 
@@ -60,6 +118,7 @@
 			<tr>
 				<td>Name</td>
 				<td>Weight</td>
+				<td></td>
 			</tr>
 		</thead>
 		<tbody>
@@ -67,26 +126,43 @@
 				<tr>
 					<td>{option.name}</td>
 					<td>{option.weight}</td>
+					<td><div style={`height: 20px; width:${option.percentage}px; background-color: ${option.colour}`}></div></td>
 				</tr>
 			{/each}
+			
+			<!-- Reset button to clear state -->
+			{#if options.length}
+				<tr><td><button on:click={doReset}>Reset</button></td></tr>
+			{/if}
 		</tbody>
 	</table>
+
+	<!-- User input of new option -->
 	<form on:submit|preventDefault={onNewOption}>
 		<input type="text" bind:value={name}/>
-		<input type="number" bind:value={weight}/>
-		<input type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === ""} />
+		<input type="number" bind:value={weight} min=1 max = 10/>
+
+		<!-- Disable if no options selected OR no name entered OR wheel is spinning -->
+		<input type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === "" || $spin} />
 	</form>
-	<Pie {onWinner} {size} {options} {spin}  />
-	{#if options.length}
-		<img alt="neil-spin" class="gif tl" src="images/neil-spin.gif" />
-		{#if options.length > 1}
-			<img alt="excited-spin" class="gif tr" src="images/spin-excited.gif" />
-		{/if}
-	{/if}
-	<button on:click={() => spin = true}>Spin!</button>
+
+	<!-- Display winner as text-->
+	<h2 style={`color:${winner?.colour||"black"}`}>
+		{winner ? `Winner: ${winner.name}!!!` : ""}
+	</h2>
+
+	<Pie {onWinner} {size} {options} />
 </main>
 
 <style>
+	:global(:root){
+		--blue: #0091be;
+		--orange: #eb6404;
+		--green: #95d600;
+		--yellow: #fec600;
+		--grey: #27292d;
+		--black: #1f2023;
+    }
 	main {
 		text-align: center;
 		padding: 1em;
@@ -95,29 +171,15 @@
 	}
 
 	h1 {
-		color: #ff3e00;
+		color: var(--blue);
 		text-transform: uppercase;
 		font-size: 4em;
-		font-weight: 100;
+		font-weight: 400;
 	}
 
 	@media (min-width: 640px) {
 		main {
 			max-width: none;
 		}
-	}
-
-	.gif {
-		position: absolute;
-		height: 200px;
-		width: 200px;
-	}
-	.tr{
-		top: 0;
-		right: 0;
-	}
-	.tl{
-		top: 0;
-		left: 0;
 	}
 </style>
