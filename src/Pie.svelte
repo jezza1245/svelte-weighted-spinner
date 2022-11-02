@@ -66,6 +66,7 @@
             fill="#DDD" 
             fill-opacity="0.3"
             z='999'
+            class="clickable"
             on:click={doSpin}
             on:keydown={doSpin}
             />
@@ -77,6 +78,9 @@
 <style>
     svg {
         transition-timing-function: cubic-bezier(.26,.32,0,1);
+    }
+    .clickable:hover {
+        cursor: pointer;
     }
     .center {
         display: flex;

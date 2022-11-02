@@ -4,7 +4,7 @@
 	
 	const size = 500 // Size of Pie
 	const halfCircumference = Math.PI * size/2;
-	const getNewColour = colourGenerator() // Instantiate colour generator
+	let getNewColour = colourGenerator() // Instantiate colour generator
 	
 	let options: Option[] = []
 	let name = ""
@@ -107,10 +107,16 @@
 	function doReset() {
 		options = []
 		winner = undefined
+		getNewColour = colourGenerator()
 	}
 
+	// Copy text inside the text field
+	function copyText(text) {
+		navigator.clipboard.writeText(text);
+	}
 </script> 
 
+<a rel="noreferrer" target="_blank" href="https://github.com/jezza1245/svelte-weighted-spinner">Link to source code on GitHub</a>
 <main>
 	<h1>TC-Spinner</h1>
 	<table>
@@ -147,9 +153,15 @@
 	</form>
 
 	<!-- Display winner as text-->
-	<h2 style={`color:${winner?.colour||"black"}`}>
-		{winner ? `Winner: ${winner.name}!!!` : ""}
-	</h2>
+	{#if winner}
+		<h2>
+			Winner: 
+			<span title="Copy to clipboard" style={`color:${winner?.colour||"black"}`} on:keydown on:click={() => navigator.clipboard.writeText(winner.name)} class="winner-text">
+				{winner.name}
+			</span>
+			!!!
+		</h2>
+	{/if}
 
 	<Pie {onWinner} {size} {options} />
 </main>
@@ -175,6 +187,21 @@
 		text-transform: uppercase;
 		font-size: 4em;
 		font-weight: 400;
+	}
+
+	a {
+		color: var(--orange);
+		font-weight: bold;
+		position: absolute;
+		right:15px;
+		top:15px;
+	}
+
+	.winner-text {
+		font-weight: 600;
+	}
+	.winner-text:hover {
+		cursor: pointer;
 	}
 
 	@media (min-width: 640px) {
