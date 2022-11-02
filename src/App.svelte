@@ -1,4 +1,6 @@
 <script lang="ts">
+  	import { onMount } from 'svelte';
+	import confetti from 'canvas-confetti';
 	import Pie from './Pie.svelte';
 	import { spin } from './store'
 	
@@ -10,6 +12,7 @@
 	let name = ""
 	let weight = 1
 	let winner : Option
+	let performConfetti
 
 	// Generate a new colour from the set or provided colours. If none left, generate a new random colour
 	function* colourGenerator() : Generator<string>{
@@ -101,6 +104,13 @@
 	// When a winner is calculated, set the winner in state [TODO: do from pie, use store]
 	function onWinner(option: Option) {
 		winner = option
+
+		// Create confetti explosion with the winners colour only
+		performConfetti({
+			particleCount: 200,
+			spread: 300,
+			colors: [option.colour]
+		})
 	}
 
 	// Reset state values
@@ -110,12 +120,20 @@
 		getNewColour = colourGenerator()
 	}
 
-	// Copy text inside the text field
-	function copyText(text) {
-		navigator.clipboard.writeText(text);
-	}
+	// On initial mount
+	onMount(() => {
+		// Get confetti canvas
+		let myCanvas = document.getElementById('confetti-canvas')
+		
+		// Create callable confetti explosion method from the canvas
+		performConfetti = confetti.create(myCanvas, {
+			resize: true,
+			useWorker: true
+		});
+	})
 </script> 
 
+<canvas id="confetti-canvas"></canvas>
 <a rel="noreferrer" target="_blank" href="https://github.com/jezza1245/svelte-weighted-spinner">Link to source code on GitHub</a>
 <main>
 	<h1>TC-Spinner</h1>
@@ -156,7 +174,7 @@
 	{#if winner}
 		<h2>
 			Winner: 
-			<span title="Copy to clipboard" style={`color:${winner?.colour||"black"}`} on:keydown on:click={() => navigator.clipboard.writeText(winner.name)} class="winner-text">
+			<span style={`color:${winner?.colour||"black"}`} class="winner-text">
 				{winner.name}
 			</span>
 			!!!
@@ -175,6 +193,17 @@
 		--grey: #27292d;
 		--black: #1f2023;
     }
+
+	#confetti-canvas{
+		position:absolute;
+		height:100vh;
+		width:100vw;
+		top:0;
+		left:0;
+		z-index:999;
+		pointer-events:none;
+	}
+
 	main {
 		text-align: center;
 		padding: 1em;
@@ -199,9 +228,6 @@
 
 	.winner-text {
 		font-weight: 600;
-	}
-	.winner-text:hover {
-		cursor: pointer;
 	}
 
 	@media (min-width: 640px) {
