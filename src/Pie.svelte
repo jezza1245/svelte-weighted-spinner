@@ -115,7 +115,9 @@
     .chevron {
         font-size: xx-large;
         font-weight: bold;
-        height: 40px;
+        height: 10px;
+        position: relative;
+        bottom: 30px;
         z-index: 3;
     }
     text {

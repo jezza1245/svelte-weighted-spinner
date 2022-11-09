@@ -226,7 +226,7 @@
 
 	main {
 		text-align: center;
-		padding: 5em 1em;
+		padding: 1em;
 		max-width: 240px;
 		margin: 0 auto;
 	}
@@ -235,6 +235,7 @@
 		position: absolute;
 		width: 350px;
 		right: 0.5em;
+		top: 4em;
 	}
 
 	h1 {
