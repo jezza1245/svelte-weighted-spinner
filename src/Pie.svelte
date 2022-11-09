@@ -1,37 +1,46 @@
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
   import PieComponent from "./PieComponent.svelte";
-  import { spin } from "./store";
+  import { interactions } from "./store";
 
   export let options : Option[]   
   export let size : number
-  export let onWinner : (option:Option) => void
 
-  // Min and max wheel spin rotation in degrees
-  const min = 2000
-  const max = 7000
+  const dispatch = createEventDispatcher() // To dispatch a winner event
+
+  // Min and max wheel isSpinning rotation in degrees
+  const min = 4000
+  const max = 9000
   
-  let randomRotation = 0 // Random rotation for wheel spin
+  let randomRotation = 0 // Random rotation for wheel isSpinning
+  let isSpinning = false
 
-  // Select winner and return to parent via callback [TODO: use global store]
+  // Select winner and return to parent via callback
   function afterWheelSpin() {
-      if($spin) {
-        const winnerSliceRotation = (randomRotation + 90) % 360 
+      if(isSpinning) {
+        const winnerSliceRotation = (randomRotation + 90) % 360 // Determine winner with maffs 
         let winner
         options.some((option) => {            
             if(option.rotation >= winnerSliceRotation) return true
             winner = option
         })
-        spin.set(false)
-        onWinner(winner)
+        dispatch('winner', {winner}) // Update winner in global state
+        interactions.set(true)
     }
   }
 
+  // Start the spinning
   function doSpin() {
-    spin.set(true)
+    interactions.set(false) // Prevent interactions
+    isSpinning = false // Reset rotation to 0
+    setInterval(() => {
+        // After short delay start new spin
+        isSpinning = true
+    }, 100)
   }
 
-  // When spin -> calculate random rotation of the wheel
-  $: if($spin) randomRotation = Math.floor(Math.random() * (max - min + 1)) + min;
+  // When isSpinning -> calculate random rotation of the wheel
+  $: if(isSpinning) randomRotation = Math.floor(Math.random() * (max - min + 1)) + min;
   
   // Update radius if size of pie changes
   $: radius = size / 2;
@@ -39,25 +48,25 @@
 </script>
 
 <div class="center">
-    <div class="chevron">˯</div> 
+    {#if options.length}
+        <div class="chevron">˯</div> 
+    {/if}
     
     <svg 
         on:transitionend={afterWheelSpin} 
-        style={spin ? `transform: rotate(${randomRotation}deg); transition-duration: ${randomRotation+500}ms;` : ""} 
+        style={isSpinning ? `transform: rotate(${randomRotation}deg); transition-duration: ${randomRotation+1500}ms;` : ""} 
         width={size}
         height={size} 
         viewBox={`0 0 ${size} ${size}`} 
     >
 
-    
         <!-- Render options as Pie Slices -->
         {#each options as option}
             <PieComponent {option} {radius} />
         {/each}
     
-
-        <!-- Spin overlay and text - click to spin the wheel -->
-        {#if options.length && !$spin}
+        <!-- Spin overlay and text - click to isSpinning the wheel -->
+        {#if options.length && $interactions}
             <text alignment-baseline='central' text-anchor="middle" x={radius} y={radius} fill='var(--black)' dy=".1em">Click to Spin!</text>
             <circle
             r={radius}
@@ -72,6 +81,18 @@
             />
         {/if}
 
+        <!-- Overlay while no options selected-->
+        {#if !options.length && $interactions}
+            <text alignment-baseline='central' text-anchor="middle" x={radius} y={radius} fill='var(--black)' dy=".1em">Enter some options!</text>
+            <circle
+            r={radius}
+            cx={radius}
+            cy={radius}
+            fill="#DDD" 
+            fill-opacity="0.3"
+            z='999'
+            />
+        {/if}
     </svg>
 </div>
 

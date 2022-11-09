@@ -2,12 +2,12 @@
   	import { onMount } from 'svelte';
 	import confetti from 'canvas-confetti';
 	import Pie from './Pie.svelte';
-	import { spin } from './store'
+	import { interactions } from './store'
 	
 	const size = 500 // Size of Pie
 	const halfCircumference = Math.PI * size/2;
-	let getNewColour = colourGenerator() // Instantiate colour generator
 	
+	let getNewColour = colourGenerator() // Instantiate colour generator
 	let options: Option[] = []
 	let name = ""
 	let weight = 1
@@ -59,14 +59,11 @@
 		if(withRotations.length > 1){
 			// For each option
 			options = [...withRotations.map((option, index) => {		
-
 				// Get index of next option (looping round array)
 				const nextLoopingIndex = (index + 1)%withRotations.length
 				let nextRotation = withRotations[nextLoopingIndex].rotation 
-
 				// if 0 set to 360
 				nextRotation = nextRotation === 0 ? 360 : nextRotation
-	
 				// text rotation is equal to the average of the current and next slice rotation (puts in center of slice)
 				return {
 					...option,
@@ -83,16 +80,12 @@
 	function onNewOption() {
 		// Calculate the total weights of all options
 		const newTotalWeight = options.reduce((count, option) => count + option.weight, 0) + weight
-
 		// Get next available colour for the slice
 		const colour = getNewColour.next().value 
-
 		// Generate a new option and add percentage and pie size given the total weights of all options
 		const newOption = addPercentageAndPieSizeToOption({name, weight, colour, percentage: null, rotation: 0, pieSize: null, textRotation: null}, newTotalWeight)
-		
 		// Go through existing options and update those with the new total weight
 		const updatedExistingOptions = options.map((option) => addPercentageAndPieSizeToOption(option, newTotalWeight))
-
 		// Add new option to updated existing options and add/update rotations
 		addRotationToOption([...updatedExistingOptions, newOption])
 
@@ -102,14 +95,14 @@
 	}	
 
 	// When a winner is calculated, set the winner in state [TODO: do from pie, use store]
-	function onWinner(option: Option) {
-		winner = option
+	function onWinner(event:CustomEvent<{winner: Option}> ) {
+		winner = event.detail.winner
 
 		// Create confetti explosion with the winners colour only
 		performConfetti({
 			particleCount: 200,
 			spread: 300,
-			colors: [option.colour]
+			colors: [winner.colour]
 		})
 	}
 
@@ -135,6 +128,7 @@
 
 <canvas id="confetti-canvas"></canvas>
 <a rel="noreferrer" target="_blank" href="https://github.com/jezza1245/svelte-weighted-spinner">Link to source code on GitHub</a>
+<form id="addOptionForm" on:submit|preventDefault={onNewOption} />
 <main>
 	<h1>TC-Spinner</h1>
 	<table>
@@ -154,34 +148,39 @@
 				</tr>
 			{/each}
 			
+			<tr>
+				<td>
+					<input form="addOptionForm" type="text" bind:value={name}/>
+				</td>
+				<td>
+					<input form="addOptionForm" type="number" bind:value={weight} min=1 max = 10/>
+				</td>
+				<td>
+					<!-- Disable if no options selected OR no name entered OR wheel is spinning -->
+					<input form="addOptionForm" type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === "" || !$interactions} />
+				</td>
+			</tr>
+			
 			<!-- Reset button to clear state -->
 			{#if options.length}
 				<tr><td><button on:click={doReset}>Reset</button></td></tr>
 			{/if}
 		</tbody>
 	</table>
-
-	<!-- User input of new option -->
-	<form on:submit|preventDefault={onNewOption}>
-		<input type="text" bind:value={name}/>
-		<input type="number" bind:value={weight} min=1 max = 10/>
-
-		<!-- Disable if no options selected OR no name entered OR wheel is spinning -->
-		<input type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === "" || $spin} />
-	</form>
-
+	
+	
 	<!-- Display winner as text-->
 	{#if winner}
-		<h2>
-			Winner: 
-			<span style={`color:${winner?.colour||"black"}`} class="winner-text">
-				{winner.name}
-			</span>
-			!!!
-		</h2>
+	<h2>
+		Winner: 
+		<span style={`color:${winner?.colour||"black"}`} class="winner-text">
+			{winner.name}
+		</span>
+		!!!
+	</h2>
 	{/if}
 
-	<Pie {onWinner} {size} {options} />
+	<Pie on:winner={onWinner} {size} {options} />
 </main>
 
 <style>
@@ -211,6 +210,12 @@
 		margin: 0 auto;
 	}
 
+	table {
+		position: absolute;
+		width: 400px;
+		right: 0;
+	}
+
 	h1 {
 		color: var(--blue);
 		text-transform: uppercase;
@@ -226,8 +231,39 @@
 		top:15px;
 	}
 
+	table {
+		table-layout: fixed;
+	}
+	td:nth-child(1) {
+		width: 50%;
+	}
+	td:nth-child(2) {
+		width: 15%;
+	}
+	td:nth-child(3) {
+		width: 35%;
+	}
+	input {
+		width: 100%;
+	}
+
 	.winner-text {
 		font-weight: 600;
+	}
+
+	.col {
+		display: flex;
+		flex-direction: column;
+	}
+	.row {
+		display: flex;
+		flex-direction: row;
+	}
+	.left {
+		width: 400px;
+	}
+	.right {
+
 	}
 
 	@media (min-width: 640px) {
