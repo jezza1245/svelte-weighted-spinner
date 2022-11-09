@@ -3,6 +3,7 @@
 	import confetti from 'canvas-confetti';
 	import Pie from './Pie.svelte';
 	import { interactions } from './store'
+  	import { getRandomColourHex } from './Utilities';
 	
 	const size = 500 // Size of Pie
 	const halfCircumference = Math.PI * size/2;
@@ -11,7 +12,7 @@
 	let options: Option[] = []
 	let name = ""
 	let weight = 1
-	let winner : Option
+	let winnerIndex : number
 	let performConfetti
 
 	// Generate a new colour from the set or provided colours. If none left, generate a new random colour
@@ -20,7 +21,7 @@
 		let index = 0
 		while(true){
 			if(index < colours.length) yield colours[index++]
-			else yield `#${Math.floor(Math.random()*16777100).toString(16)}`
+			else yield `#${getRandomColourHex()}`
 		}
 		
 	}
@@ -95,23 +96,23 @@
 	}	
 
 	// When a winner is calculated, set the winner in state [TODO: do from pie, use store]
-	function onWinner(event:CustomEvent<{winner: Option}> ) {
-		winner = event.detail.winner
-
+	function onWinner(event:CustomEvent<{winner: number}> ) {
+		winnerIndex = event.detail.winner
+		
 		// Create confetti explosion with the winners colour only
 		performConfetti({
 			particleCount: 200,
 			spread: 300,
-			colors: [winner.colour]
+			colors: [options[winnerIndex].colour]
 		})
 	}
 
 	// Reset state values
-	function doReset() {
-		options = []
-		winner = undefined
-		getNewColour = colourGenerator()
-	}
+	// function doReset() {
+	// 	options = []
+	// 	winner = undefined
+	// 	getNewColour = colourGenerator()
+	// }
 
 	// On initial mount
 	onMount(() => {
@@ -125,7 +126,18 @@
 		});
 	})
 
+	function updateColour(optionName) {
+		let tempOptions = options
+		tempOptions.forEach((option) => {
+			if(option.name === optionName) {
+				option.colour = `#${getRandomColourHex()}`
+			}
+		})
+		options = [...tempOptions]
+	}
+
 	$: if(winner) document.title = winner.name + " wins!"
+	$: winner = options[winnerIndex]
 </script> 
 
 <canvas id="confetti-canvas"></canvas>
@@ -148,7 +160,11 @@
 					<tr>
 						<td title={option.name}>{option.name}</td>
 						<td>{option.weight}</td>
-						<td><div style={`height: 20px; width:${option.percentage}px; background-color: ${option.colour}`}></div></td>
+						<td>
+							<div style={`cursor: pointer; height: 20px; width:${option.percentage}px; background-color: ${option.colour}`} 
+								on:keydown on:click={() => {$interactions && updateColour(option.name)}}>
+							</div>
+						</td>
 					</tr>
 				{/each}
 				
@@ -166,9 +182,9 @@
 				</tr>
 				
 				<!-- Reset button to clear state -->
-				{#if options.length}
+				<!-- {#if options.length}
 					<tr><td colspan="3"><button on:click={doReset} style="float: right;">Reset</button></td></tr>
-				{/if}
+				{/if} -->
 			</tbody>
 		</table>
 	</div>
@@ -178,7 +194,7 @@
 	<h2>
 		{#if winner}
 		Winner: 
-		<span style={`color:${winner?.colour||"black"}`} class="winner-text">
+		<span style={`color:${winner.colour}`} class="winner-text">
 			{winner.name}
 		</span>
 		!!!

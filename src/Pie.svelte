@@ -20,9 +20,9 @@
       if(isSpinning) {
         const winnerSliceRotation = (randomRotation + 90) % 360 // Determine winner with maffs 
         let winner
-        options.some((option) => {            
+        options.some((option, index) => {            
             if(option.rotation >= winnerSliceRotation) return true
-            winner = option
+            winner = index
         })
         dispatch('winner', {winner}) // Update winner in global state
         interactions.set(true)
