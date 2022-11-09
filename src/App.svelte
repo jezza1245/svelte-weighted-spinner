@@ -124,6 +124,8 @@
 			useWorker: true
 		});
 	})
+
+	$: if(winner) document.title = winner.name + " wins!"
 </script> 
 
 <canvas id="confetti-canvas"></canvas>
@@ -131,54 +133,57 @@
 <form id="addOptionForm" on:submit|preventDefault={onNewOption} />
 <main>
 	<h1>TC-Spinner</h1>
-	<table>
-		<thead>
-			<tr>
-				<td>Name</td>
-				<td>Weight</td>
-				<td></td>
-			</tr>
-		</thead>
-		<tbody>
-			{#each options as option}
+	<div class="col">
+
+		<table>
+			<thead>
 				<tr>
-					<td>{option.name}</td>
-					<td>{option.weight}</td>
-					<td><div style={`height: 20px; width:${option.percentage}px; background-color: ${option.colour}`}></div></td>
+					<td>Name</td>
+					<td>Weight</td>
+					<td></td>
 				</tr>
-			{/each}
-			
-			<tr>
-				<td>
-					<input form="addOptionForm" type="text" bind:value={name}/>
-				</td>
-				<td>
-					<input form="addOptionForm" type="number" bind:value={weight} min=1 max = 10/>
-				</td>
-				<td>
-					<!-- Disable if no options selected OR no name entered OR wheel is spinning -->
-					<input form="addOptionForm" type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === "" || !$interactions} />
-				</td>
-			</tr>
-			
-			<!-- Reset button to clear state -->
-			{#if options.length}
-				<tr><td><button on:click={doReset}>Reset</button></td></tr>
-			{/if}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each options as option}
+					<tr>
+						<td title={option.name}>{option.name}</td>
+						<td>{option.weight}</td>
+						<td><div style={`height: 20px; width:${option.percentage}px; background-color: ${option.colour}`}></div></td>
+					</tr>
+				{/each}
+				
+				<tr>
+					<td>
+						<input form="addOptionForm" type="text" bind:value={name} maxlength="25"/>
+					</td>
+					<td>
+						<input form="addOptionForm" type="number" bind:value={weight} min=1 max = 10/>
+					</td>
+					<td>
+						<!-- Disable if no options selected OR no name entered OR wheel is spinning -->
+						<input form="addOptionForm" type="submit" value="Add" disabled={options.some((o) => o.name===name) || name === "" || !$interactions} />
+					</td>
+				</tr>
+				
+				<!-- Reset button to clear state -->
+				{#if options.length}
+					<tr><td colspan="3"><button on:click={doReset} style="float: right;">Reset</button></td></tr>
+				{/if}
+			</tbody>
+		</table>
+	</div>
 	
 	
 	<!-- Display winner as text-->
-	{#if winner}
 	<h2>
+		{#if winner}
 		Winner: 
 		<span style={`color:${winner?.colour||"black"}`} class="winner-text">
 			{winner.name}
 		</span>
 		!!!
+		{/if}
 	</h2>
-	{/if}
 
 	<Pie on:winner={onWinner} {size} {options} />
 </main>
@@ -199,28 +204,34 @@
 		width:100vw;
 		top:0;
 		left:0;
-		z-index:999;
+		z-index:4;
 		pointer-events:none;
 	}
 
 	main {
 		text-align: center;
-		padding: 1em;
+		padding: 5em 1em;
 		max-width: 240px;
 		margin: 0 auto;
 	}
 
 	table {
 		position: absolute;
-		width: 400px;
-		right: 0;
+		width: 350px;
+		right: 0.5em;
 	}
 
 	h1 {
+		position: absolute;
+		top: 0;
 		color: var(--blue);
 		text-transform: uppercase;
-		font-size: 4em;
+		font-size: 3rem;
 		font-weight: 400;
+	}
+	h2 {
+		height: 40px;
+		margin: 0;
 	}
 
 	a {
@@ -232,9 +243,15 @@
 	}
 
 	table {
+		z-index: 3;
 		table-layout: fixed;
 	}
+	thead{
+		font-weight: 800;
+	}
 	td:nth-child(1) {
+		overflow: hidden;
+		text-overflow: ellipsis;
 		width: 50%;
 	}
 	td:nth-child(2) {
@@ -254,16 +271,6 @@
 	.col {
 		display: flex;
 		flex-direction: column;
-	}
-	.row {
-		display: flex;
-		flex-direction: row;
-	}
-	.left {
-		width: 400px;
-	}
-	.right {
-
 	}
 
 	@media (min-width: 640px) {

@@ -48,9 +48,12 @@
 </script>
 
 <div class="center">
-    {#if options.length}
-        <div class="chevron">˯</div> 
-    {/if}
+
+    <div class="chevron">
+        {#if options.length}
+            ˯
+        {/if}
+    </div> 
     
     <svg 
         on:transitionend={afterWheelSpin} 
@@ -74,7 +77,7 @@
             cy={radius}
             fill="#DDD" 
             fill-opacity="0.3"
-            z='999'
+            z='2'
             class="clickable"
             on:click={doSpin}
             on:keydown={doSpin}
@@ -90,7 +93,7 @@
             cy={radius}
             fill="#DDD" 
             fill-opacity="0.3"
-            z='999'
+            z='2'
             />
         {/if}
     </svg>
@@ -111,6 +114,9 @@
     }
     .chevron {
         font-size: xx-large;
+        font-weight: bold;
+        height: 40px;
+        z-index: 3;
     }
     text {
         font-weight: 600;
